@@ -22,3 +22,11 @@ def test_somar(client):
     assert response.status_code == 200
     json_data = response.get_json()
     assert json_data["resultado"] == 35
+
+
+def test_metrics_endpoint(client):
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert json_data["service"] == "devops-pucrs-api"
+    assert "requests_total" in json_data["metrics"]
