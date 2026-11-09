@@ -33,7 +33,7 @@ jobs:
 
       - name: Executar Testes Automatizados (Pytest)
         run: |
-          pytest -v
+          python -m pytest -v
 
   validate-iac:
     name: 2. Validação da Infraestrutura como Código (Terraform)
