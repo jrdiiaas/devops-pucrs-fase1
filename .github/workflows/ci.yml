@@ -1,4 +1,4 @@
-name: CI Pipeline - Build, Test, IaC & Docker
+name: CI/CD Pipeline - Build, Test, Security, IaC, Docker & Deploy
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    name: 1. Build, Lint e Testes Unitários
+    name: 1. Build, Lint, SAST e Testes Unitários
     runs-on: ubuntu-latest
 
     steps:
@@ -30,6 +30,10 @@ jobs:
         run: |
           flake8 app/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 app/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+
+      - name: Análise de Segurança Estática DevSecOps (Bandit SAST)
+        run: |
+          bandit -r app/ -ll
 
       - name: Executar Testes Automatizados (Pytest)
         run: |
@@ -58,7 +62,7 @@ jobs:
         run: terraform validate
 
   docker-build-test:
-    name: 3. Build e Teste de Container Docker
+    name: 3. Build e Orquestração de Container (Docker & Compose)
     runs-on: ubuntu-latest
     needs: build-and-test
 
@@ -66,12 +70,37 @@ jobs:
       - name: Checkout do código-fonte
         uses: actions/checkout@v4
 
+      - name: Validar manifesto de orquestração Docker Compose
+        run: docker compose config -q
+
       - name: Build da Imagem Docker
         run: docker build -t devops-pucrs-api:latest .
 
-      - name: Subir Container e Testar Endpoint de Saúde
+      - name: Subir Container e Testar Endpoints de Saúde e Métricas
         run: |
           docker run -d --name api-test -p 5000:5000 devops-pucrs-api:latest
           sleep 4
           curl --fail http://localhost:5000/health
+          curl --fail http://localhost:5000/metrics
           docker stop api-test
+
+  continuous-delivery:
+    name: 4. Entrega Contínua (CD) - Deploy Automatizado e Smoke Test
+    runs-on: ubuntu-latest
+    needs: [build-and-test, validate-iac, docker-build-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout do código-fonte
+        uses: actions/checkout@v4
+
+      - name: Executar Script de Deploy Automatizado com Containers (CD)
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          bash scripts/deploy.sh "${IMAGE_TAG}"
+
+      - name: Validar Logs de Monitoramento do Container em Produção
+        run: |
+          docker logs devops-pucrs-api
+          docker stop devops-pucrs-api
