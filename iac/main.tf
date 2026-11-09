@@ -169,3 +169,24 @@ resource "aws_instance" "app_server" {
     Name = "${var.project_name}-server"
   }
 }
+
+# 8. Alarme de Monitoramento no Amazon CloudWatch (Aulas 6, 7 e 10)
+resource "aws_cloudwatch_metric_alarm" "high_cpu" {
+  alarm_name          = "${var.project_name}-HighCPUUtilization"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 80
+  alarm_description   = "Monitora utilizacao de CPU acima de 80% na instancia EC2 de producao"
+
+  dimensions = {
+    InstanceId = aws_instance.app_server.id
+  }
+
+  tags = {
+    Name = "${var.project_name}-cpu-alarm"
+  }
+}
