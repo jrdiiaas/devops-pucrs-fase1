@@ -134,7 +134,7 @@ resource "aws_ecs_cluster" "app_cluster" {
   }
 }
 
-# 7. Instância EC2 com Docker pré-instalado via User Data
+# 7. Instância EC2 com Docker pré-instalado e Deploy Automatizado via User Data
 data "aws_ami" "amazon_linux_2023" {
   most_recent = true
   owners      = ["amazon"]
@@ -150,14 +150,19 @@ resource "aws_instance" "app_server" {
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.app_sg.id]
+  key_name               = "vockey"
 
   user_data = <<-EOF
               #!/bin/bash
               dnf update -y
-              dnf install -y docker
+              dnf install -y docker git
               systemctl start docker
               systemctl enable docker
               usermod -aG docker ec2-user
+              cd /opt
+              git clone https://github.com/jrdiiaas/devops-pucrs-fase1.git
+              cd devops-pucrs-fase1
+              bash scripts/deploy.sh latest
               EOF
 
   tags = {

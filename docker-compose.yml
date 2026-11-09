@@ -1,0 +1,24 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: devops-pucrs-api:latest
+    container_name: devops-pucrs-api
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - SERVICE_NAME=devops-pucrs-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
